@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <string>
 
-enum mask {
+enum codePointType {
     empty = 0b0000'0000,
     space = 0b0000'0001,
     cntrl = 0b0000'0010,
@@ -23,7 +23,7 @@ enum mask {
 struct Row {
     uint32_t baseCode {};
     uint32_t mask {0};
-    uint32_t normalizeCode {};
+    uint32_t normalizedCode {};
     std::string comment;
 };
 
@@ -31,22 +31,21 @@ int main () {
     //base table https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
     //used field: 0 codePoint, 1 Name, 2 General_Category, 13 Simple_Lowercase_Mapping
 
-    std::filesystem::path srcFilePath ("./UnicodeData.txt");
+    const std::filesystem::path srcFilePath ("./UnicodeData.txt");
     std::ifstream srcFile (srcFilePath);
 
     Row row;
     std::stringstream bufStream;
-    std::string rowSrc;
-    std::string::size_type leftPos;
-    std::string::size_type rightPos;
-    std::string buffer;
     int rowCounter = 0;
 
 
     while (!srcFile.eof()) {
         ++rowCounter;
-        leftPos = 0;
-        rightPos = 0;
+
+        //parse row from Unicode.txt to Row Struct
+        std::string rowSrc;
+        std::string::size_type leftPos = 0;
+        std::string::size_type rightPos = 0;
         std::getline(srcFile, rowSrc);
 
         //parse field 0 base code point
@@ -63,44 +62,45 @@ int main () {
         //rightPos:                            ↑
         row.comment = rowSrc.substr(leftPos, rightPos - leftPos);
 
-        //parse field 2 General_Category - mask
+        //parse field 2 General_Category - codePointType
         leftPos = rightPos + 1;
         rightPos = rowSrc.find(';', leftPos);
         // leftPos:                             ↓
         //  rowSrc: 0041;LATIN CAPITAL LETTER A;Lu;0;L;;;;;N;;;;0061;
         //rightPos:                               ↑
-        buffer = rowSrc.substr(leftPos, rightPos - leftPos);
-        row.mask = mask::empty;
+
+        std::string buffer = rowSrc.substr(leftPos, rightPos - leftPos);
+        row.mask = codePointType::empty;
         switch (buffer[0]) {
             case 'L':
-                if (buffer[1] == 'u') row.mask |= mask::upper | mask::alpha;
-                if (buffer[1] == 'l') row.mask |= mask::lower | mask::alpha;
+                if (buffer[1] == 'u') row.mask |= codePointType::upper | codePointType::alpha;
+                if (buffer[1] == 'l') row.mask |= codePointType::lower | codePointType::alpha;
                 break;
             case 'M':
                 break;
             case 'N':
-                if (buffer[1] == 'd') row.mask |= mask::digit;
+                if (buffer[1] == 'd') row.mask |= codePointType::digit;
                 break;
             case 'P':
-                row.mask |= mask::punct;
+                row.mask |= codePointType::punct;
                 if (buffer[1] == 'd') {
-                    row.mask |= mask::dashp;
+                    row.mask |= codePointType::dashp;
                 }
                 break;
             case 'S':
                 break;
             case 'Z':
-                if (buffer[1] == 's') row.mask |= mask::space;
+                if (buffer[1] == 's') row.mask |= codePointType::space;
                 break;
             case 'C':
-                if (buffer[1] == 'c') row.mask |= mask::cntrl;
+                if (buffer[1] == 'c') row.mask |= codePointType::cntrl;
                 break;
         }
 
         //for basic code points not subject to mandatory replacement
-        row.normalizeCode = row.baseCode;
+        row.normalizedCode = row.baseCode;
         //field 3 Simple_Lowercase_Mapping for unconditional replacement
-        if (row.mask & mask::upper) {
+        if (row.mask & codePointType::upper) {
             for (int i = 3; i <= 13; ++i) {
                 leftPos = rowSrc.find(';', ++leftPos);
             }
@@ -111,25 +111,25 @@ int main () {
             //rightPos:                                                 ↑
             if (leftPos  != rightPos) {
                 buffer = rowSrc.substr(leftPos, rightPos - leftPos);
-                row.normalizeCode = std::stoul(buffer, nullptr, 16);
+                row.normalizedCode = std::stoul(buffer, nullptr, 16);
             }
         }
 
 
         bufStream << std::hex << std::showbase;
-        bufStream << "    {" << row.baseCode << ", {" << row.mask << ", " << row.normalizeCode << "}}, //" << row.comment << std::endl;
+        bufStream << "    {" << row.baseCode << ", {" << row.mask << ", " << row.normalizedCode << "}}, //" << row.comment << std::endl;
     }
 
-    //create NormalTable.h
-    std::filesystem::path outFilePath ("./NormalTable.h");
+    //create NormalizationTable.h
+    const std::filesystem::path outFilePath ("./NormalizationTable.h");
     std::ofstream outFile (outFilePath);
 
-    outFile << "#ifndef SEARCH_FOR_AT_NORMALTABLE_H\n"
-               "#define SEARCH_FOR_AT_NORMALTABLE_H\n\n";
+    outFile << "#ifndef SEARCH_FOR_AT_NORMALIZATIONTABLE_H\n"
+               "#define SEARCH_FOR_AT_NORMALIZATIONTABLE_H\n\n";
 
     outFile << "#include <cstdint>\n"
                "#include <unordered_map>\n\n"
-               "enum mask {\n"
+               "enum codePointType {\n"
                "    empty = 0b0000'0000,\n"
                "    space = 0b0000'0001,\n"
                "    cntrl = 0b0000'0010,\n"
@@ -141,17 +141,17 @@ int main () {
                "    dashp = 0b1000'0000\n"
                "};\n\n";
 
-    outFile << "//special code points for optional replace of code point\n"
-               "enum special {\n"
+    outFile << "//replacementCodePoint code points for optional replace of code point\n"
+               "enum replacementCodePoint {\n"
                "    nothing = 0xffff, //for delete of code point\n"
                "    ws = 0x0020,\n"
                "};\n\n";
 
-    outFile << "//key = base code point  value = mask for optional replacement, code point for unconditional replacement\n";
+    outFile << "//key = base code point  value = codePointType for optional replacement, code point for unconditional replacement\n";
     outFile << "std::unordered_map <uint32_t, std::pair<uint8_t, uint32_t>> normalizationTable {\n";
     outFile << bufStream.view();
     outFile << "};\n\n";
-    outFile << "#endif //SEARCH_FOR_AT_NORMALTABLE_H" << std::endl;
+    outFile << "#endif //SEARCH_FOR_AT_NORMALIZATIONTABLE_H" << std::endl;
 
     srcFile.close();
     outFile.close();

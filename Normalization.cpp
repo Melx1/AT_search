@@ -1,117 +1,61 @@
-//text normalization functions and wrapper get/put for stream of unicode utf8
-//normalization based unicode data
+//utf8 string normalization functions, where normalization based unicode data
 
-#include <filesystem>
-#include <fstream>
+#include "utf8.h"
+
 #include <iostream>
 #include <string>
-#include <bit>
-#include <cstdint>
-#include <vector>
 #include <sstream>
-#include "NormalTable.h"
+#include "Normalization.h"
+#include "NormalizationTable.h"
 
 
-std::istream& getCodePoint (std::istream& stream, uint32_t& codePoint) {
-    char codeUnit = 0;
-    stream.get(codeUnit);
-    if (!stream) {
-        codePoint = special::nothing;
-        return stream;
-    }
-
-    int count = std::countl_one(static_cast<unsigned char>(codeUnit)); // since c++20
-
-    if (count == 0) {
-        codePoint = static_cast<uint32_t>(codeUnit);
-        return stream;
-    }
-    //lead byte
-    codePoint = codeUnit & ((1<<(8-count))-1);
-
-    //trail byte
-    switch (count) {
-        case 4:
-            stream.get(codeUnit);
-            codePoint = (codePoint << 6) | (codeUnit & 0b0011'1111);
-        case 3:
-            stream.get(codeUnit);
-            codePoint = (codePoint << 6) | (codeUnit & 0b0011'1111);
-        case 2:
-            stream.get(codeUnit);
-            codePoint = (codePoint << 6) | (codeUnit & 0b0011'1111);
-    }
-    return stream;
-}
-
-std::ostream& putCodePoint (std::ostream& stream, const uint32_t& codePoint) {
-    //special code points block check
-    switch (codePoint) {
-        case special::nothing: return stream;
-    }
-
-    //put code point
-    if(codePoint <= 0x7F) {
-        stream.put(static_cast<char>(codePoint));
-    }
-    else if(codePoint <= 0x7FF) {
-        stream.put(static_cast<char>(codePoint >> 6) | 0b1100'0000);
-        stream.put((static_cast<char>(codePoint) & 0b0011'1111) | 0b1000'0000);
-    }
-    else if(codePoint <= 0xFFFF) {
-        stream.put(static_cast<char>(codePoint >> 12) | 0b1110'0000);
-        stream.put((static_cast<char>(codePoint >> 6) & 0b0011'1111) | 0b1000'0000);
-        stream.put((static_cast<char>(codePoint) & 0b0011'1111) | 0b1000'0000);
-    }
-    else {
-        stream.put(static_cast<char>(codePoint  >> 18) | 0b1111'0000);
-        stream.put((static_cast<char>(codePoint >> 12) & 0b0011'1111) | 0b1000'0000);
-        stream.put((static_cast<char>(codePoint >> 6) & 0b0011'1111) | 0b1000'0000);
-        stream.put((static_cast<char>(codePoint) & 0b0011'1111) | 0b1000'0000);
-    }
-    return stream;
-}
-
-
-void normalizeCodePoint (uint32_t& codePoint) {
-    if (!normalizationTable.contains(codePoint)) return;
-
+bool normalizeCodePoint (uint32_t& codePoint) {
+    if (!normalizationTable.contains(codePoint)) return false;
     //unconditional replacement
     codePoint = normalizationTable[codePoint].second;
-
     //ё->е replace
-    if (codePoint == 0x0451) {
-        codePoint = 0x0435;
-    }
-
-    //dash replace on white space
-    if (normalizationTable[codePoint].first & mask::dashp) {
-        codePoint = special::ws;
-    }
-
-    //punctuation ignore
-    if (normalizationTable[codePoint].first & mask::punct) {
-        codePoint = special::nothing;
-    }
-
-    //numeric ignore
-    if (normalizationTable[codePoint].first & mask::digit) {
-        codePoint = special::nothing;
-    }
+    if (codePoint == 0x0451) codePoint = 0x0435;
+    return true;
 }
 
+bool checkCodePointType(const uint32_t &codePoint, codePointType filter) {
+    if (!normalizationTable.contains(codePoint)) {
+        if (filter == empty) return true;
+        return false;
+    }
+    if (normalizationTable[codePoint].first & filter) return true;
+    return false;
+}
 
+std::string getWord(std::istream &istream, codePointType delim) {
+    uint32_t codePoint = 0;
+    std::ostringstream ostringstream;
+    int count = 0;
+    while (istream) {
+        if (!utf8::getCodePoint(istream, codePoint)) break;
+        if (!checkCodePointType(codePoint, delim)) {
+            utf8::putCodePoint(ostringstream, codePoint);
+            ++count;
+        }
+        else if (count != 0) {
+            break;
+        }
+    }
+    return ostringstream.str();
+}
+
+/*
 std::vector<std::string> tokenize (std::istream& stream) {
     std::vector<std::string> wordsPool;
     std::stringstream bufferStream;
     std::string word;
-    uint32_t codePoint;
+    uint32_t codePoint = 0;
 
     while (stream) {
         getCodePoint(stream, codePoint);
         normalizeCodePoint (codePoint);
 
-        if (codePoint == special::nothing) {
+        if (codePoint == replacementCodePoint::nothing) {
             bufferStream >> word;
             bufferStream.ignore(INT_MAX);
             bufferStream.clear();
@@ -123,7 +67,7 @@ std::vector<std::string> tokenize (std::istream& stream) {
         if (!normalizationTable.contains(codePoint)) {
             putCodePoint(bufferStream, codePoint);
         }
-        else if (normalizationTable[codePoint].first & (mask::cntrl | mask::space)) {
+        else if (normalizationTable[codePoint].first & (codePointType::cntrl | codePointType::space)) {
             bufferStream >> word;
             bufferStream.ignore(INT_MAX);
             bufferStream.clear();
@@ -181,6 +125,9 @@ int main () {
         out << item << std::endl;
     }
 */
+/*
 std::cout << sizeof(void*) << std::endl;
 
 }
+*/
+

@@ -11,12 +11,16 @@ endif()
 set(CMAKE_RC_COMPILER windres.exe)
 
 include(FetchContent)
-FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
-        GIT_TAG e53437b79965e5de9e9bef5a3e7ec609587268d6)
+FetchContent_Declare(
+        cpr
+        GIT_REPOSITORY https://github.com/libcpr/cpr.git
+        GIT_TAG e53437b79965e5de9e9bef5a3e7ec609587268d6
+)
 FetchContent_MakeAvailable(cpr)
 
-add_executable(search_for_AT ATparser.cpp)
-target_link_libraries(search_for_AT PRIVATE cpr::cpr)
+add_executable(parser parser.cpp ATParser.h ATParser.cpp BookInfo.h BookInfo.cpp)
+target_link_libraries(parser PRIVATE cpr::cpr)
 
-add_executable(Normalization Normalization.cpp)
-add_executable(CreateNoramalTable CreateNoramalTable.cpp)
+add_executable(Normalization Normalization.cpp utf8.cpp utf8.h Normalization.h)
+add_executable(CreateNoramalTable CreateNoramalizationTable.cpp)
+add_executable(test OpenCorporaDict.cpp DATrie.cpp BookInfo.cpp BookInfo.h)

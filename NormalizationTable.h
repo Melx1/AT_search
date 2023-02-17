@@ -1,10 +1,10 @@
-#ifndef SEARCH_FOR_AT_NORMALTABLE_H
-#define SEARCH_FOR_AT_NORMALTABLE_H
+#ifndef SEARCH_FOR_AT_NORMALIZATIONTABLE_H
+#define SEARCH_FOR_AT_NORMALIZATIONTABLE_H
 
 #include <cstdint>
 #include <unordered_map>
 
-enum mask {
+enum codePointType {
     empty = 0b0000'0000,
     space = 0b0000'0001,
     cntrl = 0b0000'0010,
@@ -17,13 +17,14 @@ enum mask {
 };
 
 //special code points for optional replace of code point
-enum special {
+enum replacementCodePoint {
     nothing = 0xffff, //for delete of code point
-    ws = 0x0020,
+    ws = 0x0020
 };
 
 
-//key = base code point  value = mask for optional replacement, code point for unconditional replacement
+//key = base code point  value = pair consist of the codePointType and the unconditional replacement code point
+//for code point without the unconditional replacement, the unconditional replacement code point = base code point
 std::unordered_map <uint32_t, std::pair<uint8_t, uint32_t>> normalizationTable {
     {0, {0x2, 0}}, //<control>
     {0x1, {0x2, 0x1}}, //<control>
@@ -1298,4 +1299,4 @@ std::unordered_map <uint32_t, std::pair<uint8_t, uint32_t>> normalizationTable {
     {0x4ff, {0x18, 0x4ff}}, //CYRILLIC SMALL LETTER HA WITH STROKE
 };
 
-#endif //SEARCH_FOR_AT_NORMALTABLE_H
+#endif //SEARCH_FOR_AT_NORMALIZATIONTABLE_H
