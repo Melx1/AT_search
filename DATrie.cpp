@@ -1,79 +1,69 @@
 #include "DATrie.h"
 #include <vector>
 #include <utility>
+#include <filesystem>
+#include <fstream>
+#include "utf8.h"
 
-size_t DATrie::insertCharter(uint32_t newCharter, size_t parentIndex) { //return index of new charter
-    if (parentIndex > base.size()) return 0;
-    if (newCharter > maxCharter) maxCharter = newCharter;
-    if (newCharter < minCharter) minCharter = newCharter;
 
-    size_t newCharterIndex = base[parentIndex] + newCharter;
-    //lucky
-    if (newCharterIndex >= base.size()) {
-        base.resize(newCharterIndex);
-        check.resize(newCharterIndex);
-        payload.resize(newCharterIndex);
-        check[newCharterIndex] = parentIndex;
-        return newCharterIndex;
-    }
-
-    if (check[newCharterIndex] == 0) {
-        check[newCharterIndex] = parentIndex;
-        return newCharterIndex;
-    }
-
-    //unlucky, need relocate branch
-    //find all siblings
-    std::vector<size_t> siblings;
-    for (uint32_t charter = minCharter; charter < maxCharter; ++charter) {
-        if (charter == newCharter or check[base[parentIndex] + charter] == parentIndex) {
-            siblings.push_back(charter);
-        }
-    }
-    //find newStartPos - base[parentIndex]
-    size_t newStartPos = 0;
-    for (size_t i = 0; i < siblings.size(); ) {
-        newCharterIndex = newStartPos + siblings[i];
-        if (newCharterIndex >= base.size()) {
-            base.resize(newStartPos + siblings.back());
-            check.resize(newStartPos + siblings.back());
+std::pair<size_t, int> DATrie::traverse (const std::string& key) {
+    auto iter = key.begin();
+    size_t currentIndex = rootPos;
+    auto tempIter = iter;
+    while (iter < key.end()) {
+        tempIter = iter;
+        auto charter = utf8::getCodePoint(iter);
+        if (!DATrie::nextCharter(charter, currentIndex)) {
+            iter = tempIter;
             break;
-        }
-        if (check[newCharterIndex] != 0) {
-            i = 0;
-            ++newStartPos;
-            continue;
-        }
-        ++i;
+        };
     }
-    //relocate
-    auto oldStartPos = base[parentIndex];
-    base[parentIndex] = newStartPos;
-    for (const auto& charter : siblings) {
-        check[newStartPos + charter] = parentIndex;
-        std::swap(payload[oldStartPos + charter], payload[newStartPos + charter]);
-
-        auto childStartPos = base[oldStartPos + charter];
-        for (auto childCharter = minCharter; childCharter < maxCharter; ++childCharter) {
-            if (check[childStartPos + childCharter] == oldStartPos + charter) {
-                check[childStartPos + childCharter] = newStartPos + charter;
-            }
-        }
-
-        check[oldStartPos + charter] = 0;
-        base[oldStartPos + charter] = 0;
-    }
-    return newStartPos + newCharter;
+    return {currentIndex, iter - key.begin()};
 }
 
-bool DATrie::traverse(uint32_t charter, size_t& currentIndex) {
-    if (check[base[currentIndex] + charter] == currentIndex) {
-        currentIndex = base[currentIndex] + charter;
-        return true;
+std::pair<std::size_t, bool> DATrie::insertKey (const std::string& key) {
+    auto bufferPair = traverse(key);
+    auto currentIndex = bufferPair.first;
+    auto iter = key.begin() + bufferPair.second;
+    //the key already added
+    if (iter == key.end()) {
+        return {currentIndex, false};
     }
-    return false;
+    //add new substring
+    while (iter != key.end()) {
+        auto charter = utf8::getCodePoint(iter);
+        currentIndex = insertCharter(charter, currentIndex);
+    }
+    return {currentIndex, true};
 }
 
-bool DATrie::insertKey(const std::string &key) {
-    return false;
+size_t& DATrie::operator[](const std::string &key) {
+    auto pos = insertKey(key).first;
+    return payload[pos];
 }
+
+DATrie::DATrie(): base(rootPos + 1), check(rootPos + 1), payload(rootPos + 1), maxCharter(0), minCharter(0) {}
+
+size_t DATrie::size() {
+    return sizeof(std::vector<size_t>) + (sizeof(size_t) * base.size()) * 3 + 2 * sizeof(size_t);
+}
+
+void DATrie::save(const std::string& file_name) {
+    const std::filesystem::path filePath (file_name);
+    std::ofstream file (filePath);
+    file << minCharter << maxCharter;
+    for (auto item : base) {
+        file << item;
+    }
+    for (auto item : check) {
+        file << item;
+    }
+    for (auto item : payload) {
+        file << item;
+    }
+    file.close();
+}
+
+
+
+
