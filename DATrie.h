@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <concepts>
+#include <stdexcept>
 
 
 class DATrie {
@@ -12,35 +13,36 @@ private:
     std::vector<size_t> base;
     std::vector<size_t> check;
     std::vector<size_t> payload;
-    size_t minCharter, maxCharter;
+    uint8_t minCharter, maxCharter;
     static constexpr size_t rootPos = 1; // pos = 0 - the reserved service value
 
     size_t insertCharter (std::unsigned_integral auto newCharter, size_t parentIndex = rootPos); //return next position
-
-    bool nextCharter (std::unsigned_integral auto charter, size_t& currentPos); //traverse from current pos to the next pos, if possible
+    bool nextCharter (std::unsigned_integral auto charter, size_t& currentPos); //if possible, it goes from the current position to the next position, otherwise it does not change the current position and returns false
     std::pair<size_t, int> traverse (const std::string& key); //return a pair of the current position of the DATrie and the position of the current character of the string
+    void _reserve(size_t new_cap);
+    void _resize (size_t count);
 
 public:
     DATrie ();
     std::pair<std::size_t, bool> insertKey (const std::string& key);
     size_t& operator[](const std::string& key);
     size_t size ();
+    void resize (size_t count);
     void save (const std::string& file_name);
+    void load (const std::string& file_name);
 };
 
 
 size_t DATrie::insertCharter(std::unsigned_integral auto newCharter, size_t parentIndex) { //return index of new charter
     if (parentIndex >= base.size() or parentIndex == 0) return 0;
     if (newCharter > maxCharter) maxCharter = newCharter;
-    else if (newCharter < minCharter) minCharter = newCharter;
+    else if (newCharter == 0 or newCharter < minCharter) minCharter = newCharter;
 
     size_t newCharterIndex = base[parentIndex] + newCharter;
     //lucky
     //out of bounds
     if (newCharterIndex >= base.size()) {
-        base.resize(newCharterIndex);
-        check.resize(newCharterIndex);
-        payload.resize(newCharterIndex);
+        resize(newCharterIndex + 1);
         check[newCharterIndex] = parentIndex;
         return newCharterIndex;
     }
@@ -63,8 +65,7 @@ size_t DATrie::insertCharter(std::unsigned_integral auto newCharter, size_t pare
     for (size_t i = 0; i < siblings.size(); ) {
         newCharterIndex = newStartPos + siblings[i];
         if (newCharterIndex >= base.size()) {
-            base.resize(newStartPos + siblings.back());
-            check.resize(newStartPos + siblings.back());
+            resize(newStartPos + siblings.back() + 1);
             break;
         }
         if (check[newCharterIndex] != 0) {

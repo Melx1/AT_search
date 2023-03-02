@@ -18,9 +18,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cpr)
 
-add_executable(parser parser.cpp ATParser.h ATParser.cpp BookInfo.h BookInfo.cpp)
+add_executable(parser ATparser_main.cpp ATParser.h ATParser.cpp BookInfo.h BookInfo.cpp nlohmann/json.hpp)
 target_link_libraries(parser PRIVATE cpr::cpr)
+target_include_directories(parser PUBLIC nlohmann)
 
-add_executable(Normalization Normalization.cpp utf8.cpp utf8.h Normalization.h)
-add_executable(CreateNoramalTable CreateNoramalizationTable.cpp)
-add_executable(test OpenCorporaDict.cpp DATrie.cpp BookInfo.cpp BookInfo.h)
+add_executable(Normalization utf8.h utf8.cpp Normalization.h Normalization.cpp NormalizationTable.cpp)
+add_executable(CreateNoramalTable CreateNoramalizationTable.cpp NormalizationTable.h)
+add_executable(OpenCorporaDict OpenCorporaDict.cpp pugixml/pugixml.hpp pugixml/pugixml.cpp utf8.h utf8.cpp DATrie.h DATrie.cpp Normalization.h Normalization.cpp NormalizationTable.h NormalizationTable.cpp)
+target_include_directories(OpenCorporaDict PUBLIC pugixml)

@@ -1,47 +1,55 @@
-//utf8 string normalization functions, where normalization based unicode data
 
-#include "utf8.h"
-
-#include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
+#include "utf8.h"
 #include "Normalization.h"
 #include "NormalizationTable.h"
 
 
 bool normalizeCodePoint (uint32_t& codePoint) {
-    if (!normalizationTable.contains(codePoint)) return false;
+    if (!normTable::normalizationTable.contains(codePoint)) return false;
     //unconditional replacement
-    codePoint = normalizationTable[codePoint].second;
+    codePoint = normTable::normalizationTable.at(codePoint).second;
     //ё->е replace
-    if (codePoint == 0x0451) codePoint = 0x0435;
+    if (codePoint == normTable::specialCodePoint::Io) codePoint = normTable::specialCodePoint::Ie;
     return true;
 }
 
-bool checkCodePointType(const uint32_t &codePoint, codePointType filter) {
-    if (!normalizationTable.contains(codePoint)) {
-        if (filter == empty) return true;
+bool checkCodePointType(const uint32_t &codePoint, normTable::codePointType filter) {
+    if (!normTable::normalizationTable.contains(codePoint)) {
+        if (filter == normTable::codePointType::empty) return true;
         return false;
     }
-    if (normalizationTable[codePoint].first & filter) return true;
+    if (normTable::normalizationTable.at(codePoint).first & filter) return true;
     return false;
 }
 
-std::string getWord(std::istream &istream, codePointType delim) {
-    uint32_t codePoint = 0;
-    std::ostringstream ostringstream;
+std::string getWord(std::istream &istream, normTable::codePointType delim) {
+    std::uint32_t codePoint;
+    std::ostringstream buffer;
     int count = 0;
     while (istream) {
-        if (!utf8::getCodePoint(istream, codePoint)) break;
+        codePoint = utf8::getCodePoint(istream);
         if (!checkCodePointType(codePoint, delim)) {
-            utf8::putCodePoint(ostringstream, codePoint);
+            utf8::putCodePoint(buffer, codePoint);
             ++count;
         }
         else if (count != 0) {
             break;
         }
     }
-    return ostringstream.str();
+    return buffer.str();
+}
+
+std::string normalizeWord (const std::string& str) {
+    std::string result;
+    auto strIter = str.begin();
+    while (strIter != str.end()) {
+        auto codePoint = utf8::getCodePoint(strIter);
+        normalizeCodePoint(codePoint);
+        utf8::putCodePoint(result, codePoint);
+    }
+    return result;
 }
 
 /*
@@ -91,43 +99,7 @@ std::vector<std::string> tokenize (std::istream& stream) {
 
     return wordsPool;
 }
-
-
-int main () {
-/*
-    std::filesystem::path inPath ("./src_text/test.txt");
-    std::ifstream in;
 */
-/*
-    in.open(inPath, std::ios::binary);
-    uint32_t codePoint;
-    std::filesystem::path outPath ("./src_text/testOut.txt");
-    std::ofstream out (outPath);
-    while (in) {
-        getCodePoint(in, codePoint);
-        normalizeCodePoint (codePoint);
-        if (codePoint) {
-            putCodePoint(out, codePoint);
-        }
 
-    }
-    out.close();
-    in.close();
-*/
-/*
-    in.open(inPath, std::ios::binary);
-    auto words = tokenize(in);
-    in.close();
 
-    std::filesystem::path outPath ("./src_text/testOut.txt");
-    std::ofstream out (outPath);
-    for (auto& item : words) {
-        out << item << std::endl;
-    }
-*/
-/*
-std::cout << sizeof(void*) << std::endl;
-
-}
-*/
 

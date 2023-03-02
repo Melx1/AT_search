@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <cpr/cpr.h>
-#include "nlohmann/json.hpp"
+#include "json.hpp"
 
 std::string ATParser::excludeHtmlTag (const std::string& inputStr) {
     constexpr char openTagChar = '<';

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <filesystem>
 
 bool BookInfo::save(const std::string &directory, std::string fileName) {
     const std::string str = std::to_string(bookId) + "\n" + title + "\n" + authorFIO + "\n" + annotation;

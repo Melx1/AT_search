@@ -1,4 +1,5 @@
 /cmake-build-default/
 /nlohmann/
 /rapidxml-1.13/
-/dict.opcorpora.xml
+/cmake-build-default/dict.opcorpora.xml
+/pugixml/
