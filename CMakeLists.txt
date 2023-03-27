@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.24)
 project(search_for_AT)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -24,5 +24,12 @@ target_include_directories(parser PUBLIC nlohmann)
 
 add_executable(Normalization utf8.h utf8.cpp Normalization.h Normalization.cpp NormalizationTable.cpp)
 add_executable(CreateNoramalTable CreateNoramalizationTable.cpp NormalizationTable.h)
-add_executable(OpenCorporaDict OpenCorporaDict.cpp pugixml/pugixml.hpp pugixml/pugixml.cpp utf8.h utf8.cpp DATrie.h DATrie.cpp Normalization.h Normalization.cpp NormalizationTable.h NormalizationTable.cpp)
+add_executable(OpenCorporaDict
+        OpenCorporaDict.cpp
+        pugixml/pugixml.hpp pugixml/pugixml.cpp
+        utf8.h utf8.cpp
+        DATrie.h DATrie.cpp
+        Normalization.h Normalization.cpp
+        NormalizationTable.h NormalizationTable.cpp
+        Time_test_utilities.h)
 target_include_directories(OpenCorporaDict PUBLIC pugixml)

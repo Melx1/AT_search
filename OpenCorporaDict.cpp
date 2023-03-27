@@ -2,6 +2,8 @@
 #include "pugixml.hpp"
 #include "DATrie.h"
 #include "Normalization.h"
+#include "Time_test_utilities.h"
+
 
 int main () {
     pugi::xml_document ocorpXml;
@@ -19,7 +21,7 @@ int main () {
     int tempPercent = 0;
     std::cout << "size " << oCorporaTrie.size() << "\n";
 
-
+    Timer<std::chrono::milliseconds> timer;
     for (auto lemma : lemmata) {
         auto l = lemma.child("l");
         auto bufLemmaKey = l.first_attribute().value();
@@ -35,12 +37,14 @@ int main () {
         ++counter;
         auto percent = counter * 1000 / totalLemmas;
         if (percent != tempPercent) {
-            std::cout << "words " << counter << ", percent " << percent << " %\n";
+
+            std::cout << "words " << counter << ",\tpercent " << percent << " %\t\t"
+               "lap time: " << timer.next_lap().count() << " ms,\ttotal time: " << timer.check().count() << " ms\n";
             tempPercent = percent;
         }
 
     }
     oCorporaTrie.save("dict.DATrie");
     std::cout << "Complete!" << " Size dict " << oCorporaTrie.size() << " byte" << std::endl;
-
+    std::cout << "All time" << timer.stop().count() << " ms" << std::endl;
 }

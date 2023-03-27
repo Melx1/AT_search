@@ -7,6 +7,7 @@
 #include <iterator>
 #include <string>
 #include <bit>
+#include <climits>
 
 namespace utf8 {
     //unicode code point const

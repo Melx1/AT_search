@@ -15,6 +15,7 @@ private:
     std::vector<size_t> payload;
     uint8_t minCharter, maxCharter;
     static constexpr size_t rootPos = 1; // pos = 0 - the reserved service value
+    static constexpr unsigned RESIZE_FACTOR = 2;
 
     size_t insertCharter (std::unsigned_integral auto newCharter, size_t parentIndex = rootPos); //return next position
     bool nextCharter (std::unsigned_integral auto charter, size_t& currentPos); //if possible, it goes from the current position to the next position, otherwise it does not change the current position and returns false
@@ -61,7 +62,8 @@ size_t DATrie::insertCharter(std::unsigned_integral auto newCharter, size_t pare
         }
     }
     //find newStartPos = base[parentIndex]
-    size_t newStartPos = rootPos;
+    size_t newStartPos = base[check[parentIndex]];
+
     for (size_t i = 0; i < siblings.size(); ) {
         newCharterIndex = newStartPos + siblings[i];
         if (newCharterIndex >= base.size()) {

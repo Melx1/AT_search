@@ -6,6 +6,7 @@
 #include "utf8.h"
 
 
+
 std::pair<size_t, int> DATrie::traverse (const std::string& key) {
     auto currentIndex = rootPos;
     size_t i;
@@ -85,12 +86,12 @@ void DATrie::resize (size_t count) {
         _resize(count);
     }
     else {
-        auto newCap = base.capacity();
-        while (newCap < count) {
-            newCap *= 2;
+        auto newCapacity = base.capacity();
+        while (newCapacity < count) {
+            newCapacity *= RESIZE_FACTOR;
         }
         try {
-            _reserve(newCap);
+            _reserve(newCapacity);
             _resize(count);
         }
         catch (std::length_error) {
